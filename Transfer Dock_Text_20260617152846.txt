@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusQuery - Intelligent Minimalist Search</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#090d16',
+                        darkCard: '#111827',
+                        accentBlue: '#3b82f6',
+                        accentCyan: '#06b6d4',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #090d16;
+            color: #f3f4f6;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090d16;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f2937;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3b82f6;
+        }
+        /* Glowing effects */
+        .glow-hover:hover {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+        }
+        .neon-border {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.1);
+        }
+        /* Retro Terminal Easter Egg Style */
+        .retro-mode {
+            font-family: 'Fira Code', monospace !important;
+            background-color: #000000 !important;
+            color: #33ff33 !important;
+        }
+        .retro-mode * {
+            color: #33ff33 !important;
+            border-color: #33ff33 !important;
+            background-color: transparent !important;
+            box-shadow: none !important;
+            border-radius: 0px !important;
+        }
+        .retro-mode input {
+            caret-color: #33ff33;
+            outline: none !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between transition-colors duration-300">
+
+    <!-- Theme / Mode Indicators & GitHub shortcut -->
+    <div class="fixed top-4 right-4 z-50 flex items-center gap-3">
+        <button id="retroBtn" onclick="toggleRetro()" class="px-3 py-1.5 text-xs font-semibold rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1.5" title="Toggle retro green terminal mode">
+            <i data-lucide="terminal" class="w-3.5 h-3.5"></i>
+            <span>Retro Mode</span>
+        </button>
+        <span id="dbCount" class="text-xs bg-slate-800 text-slate-400 border border-slate-700 px-3 py-1.5 rounded-full font-mono">
+            Loading Index...
+        </span>
+    </div>
+
+    <!-- MAIN INTERFACE CONTAINER -->
+    <main class="flex-grow flex flex-col justify-center items-center px-4 md:px-8 transition-all duration-500 ease-in-out" id="searchWrapper">
+        
+        <!-- Search Center Widget (Moves up on search activation) -->
+        <div class="w-full max-w-2xl text-center space-y-8 transition-all duration-500 transform translate-y-0" id="searchContainer">
+            
+            <!-- Sleek Interactive Logo -->
+            <div id="logoContainer" class="cursor-pointer inline-flex flex-col items-center select-none" onclick="resetToHome()">
+                <div class="relative flex items-center justify-center">
+                    <!-- Stylized Art Asset (Engine Core SVG) -->
+                    <svg class="w-16 h-16 md:w-20 md:h-20 text-cyan-400 animate-pulse duration-4000" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5" />
+                        <line x1="12" y1="2" x2="12" y2="22" />
+                        <line x1="2" y1="8.5" x2="22" y2="15.5" />
+                        <line x1="2" y1="15.5" x2="22" y2="8.5" />
+                        <circle cx="12" cy="12" r="4" class="fill-darkBg stroke-blue-500 stroke-2" />
+                    </svg>
+                </div>
+                <h1 class="text-3xl md:text-5xl font-bold tracking-tight bg-gradient-to-r from-blue-400 via-cyan-400 to-indigo-400 bg-clip-text text-transparent mt-4 font-sans">
+                    NEXUS<span class="font-light text-slate-300">QUERY</span>
+                </h1>
+                <p id="tagline" class="text-slate-500 text-xs md:text-sm mt-2 tracking-widest uppercase">Decentralized Concept Directory</p>
+            </div>
+
+            <!-- Smart Input Container -->
+            <div class="relative w-full max-w-xl mx-auto" id="inputWrapper">
+                <div class="flex items-center bg-slate-900 border border-slate-700 rounded-full py-1 pl-4 pr-2 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-900 transition-all shadow-xl neon-border">
+                    <i data-lucide="search" class="text-slate-400 w-5 h-5 mr-2"></i>
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="Search open-source games, indie files, devlogs..." 
+                        autocomplete="off"
+                        class="bg-transparent w-full focus:outline-none text-slate-100 placeholder-slate-500 text-sm md:text-base py-2"
+                        oninput="handleInput(this.value)"
+                        onkeydown="handleKeyNavigation(event)"
+                    >
+                    <button id="clearBtn" onclick="clearSearch()" class="hidden p-2 text-slate-500 hover:text-slate-300">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="triggerSearch()" class="bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs md:text-sm px-4 md:px-5 py-2 rounded-full transition duration-200 shadow-md">
+                        Search
+                    </button>
+                </div>
+
+                <!-- Instant Autocomplete Dropdown -->
+                <div id="autocompleteDropdown" class="hidden absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl z-40 text-left">
+                    <div id="suggestionsList" class="p-2 space-y-1"></div>
+                </div>
+            </div>
+
+            <!-- Strategy Categories Selectors (Google Style pills) -->
+            <div class="flex flex-wrap justify-center gap-2 max-w-md mx-auto" id="categoryPills">
+                <button onclick="setCategory('All')" class="cat-pill active-pill px-4 py-1.5 rounded-full text-xs font-semibold bg-blue-600/20 text-blue-400 border border-blue-500/30 transition-all">All</button>
+                <button onclick="setCategory('Movies')" class="cat-pill px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700/50 hover:border-slate-500 hover:text-slate-200 transition-all">Movies</button>
+                <button onclick="setCategory('Games')" class="cat-pill px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700/50 hover:border-slate-500 hover:text-slate-200 transition-all">Games</button>
+                <button onclick="setCategory('Videos')" class="cat-pill px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700/50 hover:border-slate-500 hover:text-slate-200 transition-all">Videos</button>
+                <button onclick="setCategory('Links')" class="cat-pill px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700/50 hover:border-slate-500 hover:text-slate-200 transition-all">Links</button>
+            </div>
+
+            <!-- Quick Concept / Strategy Shortcuts -->
+            <div id="trendingSearch" class="text-xs text-slate-500 mt-4">
+                <span>Try trending searches: </span>
+                <span class="text-blue-400 hover:underline cursor-pointer ml-1 font-mono" onclick="setSearch('Shattered Pixel Dungeon')">Shattered Pixel</span>,
+                <span class="text-blue-400 hover:underline cursor-pointer ml-1 font-mono" onclick="setSearch('Love2D Android')">Love2D</span>,
+                <span class="text-blue-400 hover:underline cursor-pointer ml-1 font-mono" onclick="setSearch('retro')">retro</span>
+            </div>
+
+        </div>
+
+        <!-- SEARCH RESULTS PANEL (Displays only when search is active) -->
+        <div id="resultsPanel" class="hidden w-full max-w-4xl mt-8 mb-12 space-y-6">
+            <!-- Search Performance Metadata Metrics -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800 pb-4 text-xs text-slate-400">
+                <span id="resultsStats">Found 0 indexes (0.02 milliseconds)</span>
+                <div class="flex gap-4 mt-2 sm:mt-0 font-mono">
+                    <span>Precision: <span class="text-emerald-400">High-Match</span></span>
+                    <span>Database: <span class="text-cyan-400">Asynchronous JSON</span></span>
+                </div>
+            </div>
+
+            <!-- Main Dynamic Grid -->
+            <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Inner cards generated dynamically -->
+            </div>
+
+            <!-- Empty State / Suggestive Search feedback -->
+            <div id="emptyState" class="hidden text-center py-12 space-y-4">
+                <div id="emptyStateIconContainer">
+                    <i data-lucide="compass" class="w-12 h-12 text-slate-600 mx-auto animate-spin duration-8000"></i>
+                </div>
+                <p id="emptyStateMessage" class="text-slate-400 font-medium font-sans">No direct indexes matched your exact query.</p>
+                <p id="emptyStateSub" class="text-slate-500 text-xs">Try searching for generic terms like "open-source", "strategy", "rogue", or change categories.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER WITH SHARP & PRECISE CREDENTIALS -->
+    <footer class="w-full border-t border-slate-800 py-4 bg-slate-950/80 backdrop-blur text-center text-xs text-slate-500 px-4">
+        <div class="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
+            <span class="font-mono">NexusQuery Hub v2.1.0 // In-Memory Static Engine</span>
+            <div class="flex gap-4">
+                <span class="hover:text-blue-400 cursor-pointer">Security Protocol</span>
+                <span class="hover:text-blue-400 cursor-pointer">Offline Sandbox</span>
+                <span class="hover:text-blue-400 cursor-pointer">Manual Index Import</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- LOCAL DATA CONTROLLER & ASYNCHRONOUS INITIALIZATION -->
+    <script>
+        // Store loaded data dynamically inside DATABASE
+        let DATABASE = [];
+        
+        // Global State variables
+        let currentCategory = 'All';
+        let searchQuery = '';
+        let focusedSuggestionIndex = -1;
+
+        // Fetch data asynchronously from relative path
+        function fetchDatabase() {
+            const dbCountIndicator = document.getElementById('dbCount');
+            
+            fetch('data/search.json')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Database response error.');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    DATABASE = data;
+                    dbCountIndicator.textContent = `Index: ${DATABASE.length} nodes`;
+                    dbCountIndicator.classList.remove('text-rose-400', 'border-rose-500/30');
+                })
+                .catch(error => {
+                    console.error('Failed to load search directory:', error);
+                    dbCountIndicator.textContent = `Offline`;
+                    dbCountIndicator.classList.add('text-rose-400', 'border-rose-500/30', 'bg-rose-950/10');
+                    
+                    // Display specific fallback state explicitly matching requirement
+                    showDatabaseErrorState();
+                });
+        }
+
+        // Show explicit failure messaging
+        function showDatabaseErrorState() {
+            const resultsPanel = document.getElementById('resultsPanel');
+            const resultsGrid = document.getElementById('resultsGrid');
+            const emptyState = document.getElementById('emptyState');
+            const emptyIcon = document.getElementById('emptyStateIconContainer');
+            const emptyMsg = document.getElementById('emptyStateMessage');
+            const emptySub = document.getElementById('emptyStateSub');
+
+            // Force visual search wrapper transformation
+            const wrapper = document.getElementById('searchWrapper');
+            const container = document.getElementById('searchContainer');
+            const tagline = document.getElementById('tagline');
+            wrapper.classList.remove('justify-center');
+            wrapper.classList.add('justify-start', 'pt-10');
+            container.classList.remove('space-y-8', 'translate-y-0');
+            container.classList.add('space-y-4');
+            tagline.classList.add('hidden');
+
+            resultsPanel.classList.remove('hidden');
+            resultsGrid.classList.add('hidden');
+            emptyState.classList.remove('hidden');
+
+            emptyIcon.innerHTML = `<i data-lucide="alert-triangle" class="w-12 h-12 text-rose-500 mx-auto"></i>`;
+            emptyMsg.textContent = "Search database unavailable";
+            emptyMsg.className = "text-rose-400 font-semibold text-lg";
+            emptySub.textContent = "Verify that data/search.json exists and is reachable on your server configuration.";
+            lucide.createIcons();
+        }
+
+        // On Load initialization
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            fetchDatabase();
+            
+            // Automatic focus on mobile & desktop
+            setTimeout(() => {
+                document.getElementById('searchInput').focus();
+            }, 300);
+        });
+
+        // Set Search from external links/suggestions
+        function setSearch(val) {
+            const input = document.getElementById('searchInput');
+            input.value = val;
+            handleInput(val);
+            triggerSearch();
+        }
+
+        // Toggle Category Pills
+        function setCategory(category) {
+            currentCategory = category;
+            
+            // Update active pill styling
+            const pills = document.querySelectorAll('.cat-pill');
+            pills.forEach(pill => {
+                if (pill.textContent.trim().toLowerCase() === category.toLowerCase()) {
+                    pill.classList.remove('bg-slate-800', 'text-slate-400', 'border-slate-700/50');
+                    pill.classList.add('bg-blue-600/20', 'text-blue-400', 'border-blue-500/30', 'active-pill');
+                } else {
+                    pill.classList.add('bg-slate-800', 'text-slate-400', 'border-slate-700/50');
+                    pill.classList.remove('bg-blue-600/20', 'text-blue-400', 'border-blue-500/30', 'active-pill');
+                }
+            });
+
+            // Re-run filter on category switch
+            if (searchQuery || category !== 'All') {
+                triggerSearch();
+            }
+        }
+
+        // Handle auto-complete and suggestions display
+        function handleInput(value) {
+            searchQuery = value.trim();
+            const clearBtn = document.getElementById('clearBtn');
+            const dropdown = document.getElementById('autocompleteDropdown');
+            const suggestionsList = document.getElementById('suggestionsList');
+
+            if (searchQuery) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+                dropdown.classList.add('hidden');
+                return;
+            }
+
+            // Fuzzy Filter suggestions
+            const filteredSuggestions = DATABASE.filter(item => {
+                const matchesCategory = currentCategory === 'All' || item.category === currentCategory;
+                const matchesText = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                    (item.tags && item.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())));
+                return matchesCategory && matchesText;
+            }).slice(0, 5); // Max 5 suggestions for speed
+
+            if (filteredSuggestions.length > 0) {
+                dropdown.classList.remove('hidden');
+                suggestionsList.innerHTML = filteredSuggestions.map((item, index) => `
+                    <div 
+                        onclick="selectSuggestion('${item.title.replace(/'/g, "\\'")}')"
+                        id="suggestion-item-${index}"
+                        class="suggestion-item p-2.5 hover:bg-slate-800 rounded-lg cursor-pointer flex items-center justify-between text-xs md:text-sm text-slate-300 transition-colors"
+                    >
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span class="font-medium">${item.title}</span>
+                        </div>
+                        <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700">${item.category}</span>
+                    </div>
+                `).join('');
+                lucide.createIcons();
+                focusedSuggestionIndex = -1;
+            } else {
+                dropdown.classList.add('hidden');
+            }
+        }
+
+        function selectSuggestion(title) {
+            document.getElementById('searchInput').value = title;
+            document.getElementById('autocompleteDropdown').classList.add('hidden');
+            triggerSearch();
+        }
+
+        // Custom Key Navigation within instant auto-complete suggestions
+        function handleKeyNavigation(event) {
+            const dropdown = document.getElementById('autocompleteDropdown');
+            if (dropdown.classList.contains('hidden')) {
+                if (event.key === 'Enter') {
+                    triggerSearch();
+                }
+                return;
+            }
+
+            const items = document.querySelectorAll('.suggestion-item');
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                focusedSuggestionIndex = (focusedSuggestionIndex + 1) % items.length;
+                updateFocus(items);
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                focusedSuggestionIndex = (focusedSuggestionIndex - 1 + items.length) % items.length;
+                updateFocus(items);
+            } else if (event.key === 'Enter') {
+                event.preventDefault();
+                if (focusedSuggestionIndex >= 0 && items[focusedSuggestionIndex]) {
+                    items[focusedSuggestionIndex].click();
+                } else {
+                    triggerSearch();
+                }
+            } else if (event.key === 'Escape') {
+                dropdown.classList.add('hidden');
+            }
+        }
+
+        function updateFocus(items) {
+            items.forEach((item, index) => {
+                if (index === focusedSuggestionIndex) {
+                    item.classList.add('bg-slate-800', 'border-blue-500');
+                    item.scrollIntoView({ block: 'nearest' });
+                } else {
+                    item.classList.remove('bg-slate-800', 'border-blue-500');
+                }
+            });
+        }
+
+        // Search Action Implementation
+        function triggerSearch() {
+            const inputVal = document.getElementById('searchInput').value;
+            searchQuery = inputVal.trim();
+            document.getElementById('autocompleteDropdown').classList.add('hidden');
+
+            // Visual Check for easter egg before continuing standard query
+            if (searchQuery.toLowerCase() === 'retro') {
+                toggleRetro(true);
+            }
+
+            const startTime = performance.now();
+
+            // Core Search Execution logic: Match keywords, tags, title, categories
+            const results = DATABASE.filter(item => {
+                const matchesCategory = currentCategory === 'All' || item.category === currentCategory;
+                
+                if (!searchQuery) {
+                    return matchesCategory; // Show all entries within category if search bar is empty
+                }
+
+                const text = searchQuery.toLowerCase();
+                const matchesTitle = item.title ? item.title.toLowerCase().includes(text) : false;
+                const matchesDesc = item.description ? item.description.toLowerCase().includes(text) : false;
+                const matchesTags = item.tags ? item.tags.some(tag => tag.toLowerCase().includes(text)) : false;
+
+                return matchesCategory && (matchesTitle || matchesDesc || matchesTags);
+            });
+
+            const endTime = performance.now();
+            const processTime = ((endTime - startTime) * 10).toFixed(3); // Simulated sub-millisecond calculation
+
+            renderResults(results, processTime);
+        }
+
+        // Render Cards dynamically
+        function renderResults(results, duration) {
+            const resultsPanel = document.getElementById('resultsPanel');
+            const resultsGrid = document.getElementById('resultsGrid');
+            const emptyState = document.getElementById('emptyState');
+            const resultsStats = document.getElementById('resultsStats');
+            const wrapper = document.getElementById('searchWrapper');
+            const container = document.getElementById('searchContainer');
+            const tagline = document.getElementById('tagline');
+
+            // Reset dynamic message container details back to default
+            document.getElementById('emptyStateIconContainer').innerHTML = `<i data-lucide="compass" class="w-12 h-12 text-slate-600 mx-auto animate-spin duration-8000"></i>`;
+            const emptyMsg = document.getElementById('emptyStateMessage');
+            emptyMsg.textContent = "No direct indexes matched your exact query.";
+            emptyMsg.className = "text-slate-400 font-medium font-sans";
+            document.getElementById('emptyStateSub').textContent = "Try searching for generic terms like \"open-source\", \"strategy\", \"rogue\", or change categories.";
+
+            // Dynamic layout transition (Google Style: input moves topwards)
+            wrapper.classList.remove('justify-center');
+            wrapper.classList.add('justify-start', 'pt-10');
+            container.classList.remove('space-y-8', 'translate-y-0');
+            container.classList.add('space-y-4');
+            tagline.classList.add('hidden'); // collapse minor UI space
+
+            resultsPanel.classList.remove('hidden');
+
+            if (results.length === 0) {
+                resultsGrid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                resultsStats.textContent = `Found 0 matching files (${duration} milliseconds)`;
+            } else {
+                emptyState.classList.add('hidden');
+                resultsGrid.classList.remove('hidden');
+                resultsStats.textContent = `Indexed ${results.length} files (${duration} milliseconds)`;
+
+                resultsGrid.innerHTML = results.map(item => {
+                    // Category Badge Design Tokens
+                    let categoryBadgeColor = 'bg-slate-800 text-slate-400';
+                    if (item.category === 'Games') categoryBadgeColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+                    else if (item.category === 'Movies') categoryBadgeColor = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+                    else if (item.category === 'Videos') categoryBadgeColor = 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+                    else if (item.category === 'Links') categoryBadgeColor = 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20';
+
+                    const itemTags = item.tags || [];
+
+                    return `
+                        <div class="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-5 hover:bg-slate-900/60 transition-all duration-300 flex flex-col justify-between glow-hover group relative">
+                            <div class="space-y-2">
+                                <div class="flex items-start justify-between">
+                                    <span class="text-[10px] uppercase tracking-wider font-mono px-2.5 py-0.5 rounded-full border ${categoryBadgeColor}">
+                                        ${item.category || 'General'}
+                                    </span>
+                                    <a href="${item.url || '#'}" target="_blank" class="text-slate-500 group-hover:text-blue-400 transition-colors">
+                                        <i data-lucide="external-link" class="w-4 h-4"></i>
+                                    </a>
+                                </div>
+                                <h3 class="text-lg font-bold text-slate-100 group-hover:text-blue-300 transition-colors">
+                                    <a href="${item.url || '#'}" target="_blank">${highlightMatches(item.title || '')}</a>
+                                </h3>
+                                <p class="text-sm text-slate-400 leading-relaxed font-light">
+                                    ${highlightMatches(item.description || '')}
+                                </p>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5 mt-4 pt-4 border-t border-slate-800/60">
+                                ${itemTags.map(tag => `
+                                    <span onclick="setSearch('${tag}')" class="text-[10px] font-mono font-medium text-slate-500 hover:text-blue-400 hover:bg-slate-800 cursor-pointer px-2 py-0.5 bg-slate-950 rounded transition-all">
+                                        #${tag}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                lucide.createIcons();
+            }
+        }
+
+        // Highlight Searched Term in UI
+        function highlightMatches(text) {
+            if (!searchQuery) return text;
+            const regex = new RegExp(`(${escapeRegExp(searchQuery)})`, 'gi');
+            return text.replace(regex, '<mark class="bg-blue-500/30 text-blue-200 border-b border-blue-400 rounded-sm px-0.5">$1</mark>');
+        }
+
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // Clear Search text box helper
+        function clearSearch() {
+            const input = document.getElementById('searchInput');
+            input.value = '';
+            searchQuery = '';
+            document.getElementById('clearBtn').classList.add('hidden');
+            document.getElementById('autocompleteDropdown').classList.add('hidden');
+            input.focus();
+        }
+
+        // Reset system view back to dashboard home
+        function resetToHome() {
+            clearSearch();
+            const wrapper = document.getElementById('searchWrapper');
+            const container = document.getElementById('searchContainer');
+            const resultsPanel = document.getElementById('resultsPanel');
+            const tagline = document.getElementById('tagline');
+
+            wrapper.classList.add('justify-center');
+            wrapper.classList.remove('pt-10', 'justify-start');
+            container.classList.add('space-y-8', 'translate-y-0');
+            container.classList.remove('space-y-4');
+            tagline.classList.remove('hidden');
+
+            resultsPanel.classList.add('hidden');
+            setCategory('All');
+        }
+
+        // Toggle custom retro green CRT layout
+        function toggleRetro(forceMode = false) {
+            const isRetro = document.body.classList.toggle('retro-mode', forceMode);
+            const btn = document.getElementById('retroBtn');
+            if (isRetro) {
+                btn.innerHTML = `<i data-lucide="monitor" class="w-3.5 h-3.5"></i> Modern Mode`;
+            } else {
+                btn.innerHTML = `<i data-lucide="terminal" class="w-3.5 h-3.5"></i> Retro Mode`;
+            }
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
